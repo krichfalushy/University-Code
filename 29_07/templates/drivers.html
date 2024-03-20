@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Додавання в списки</title>
+    <style>
+        p {
+            color: #2C3A47;
+            font-family: Tahoma;
+            font-size: 20px;
+        }
+        h1 {
+            font-family: Tahoma;
+            color: #2C3A47;
+            padding: 20px; 20p; 0px; 10px;
+        }
+        input {
+            border: 2px solid #dfe4ea;
+            border-radius: 15px;
+            font-size: 15px;
+            padding: 5px;
+            width: 200px;
+        }
+        input:hover {
+            border: 2px solid #747d8c;
+            color: #ced6e0;
+        }
+        select {
+            border: 2px solid #dfe4ea;
+            border-radius: 15px;
+            font-size: 15px;
+            padding: 5px;
+            width: 200px;
+        }
+        select:hover {
+            border: 2px solid #747d8c;
+            color: #ced6e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Додавання водіїв та маршрутних листів</h1>
+    <hr>
+    <form method="POST" action="/">
+        <p>Додати водія до списку водіїв </p>
+        <input type="text" pattern="[а-яА-ЯЇїҐґЄєІі]+[ ][а-яА-ЯЇїҐґЄєІі]+[ ][а-яА-ЯЇїҐґЄєІі]+" name="name" placeholder="ПІБ">
+        <input type="number" pattern="\d+" name="weight" placeholder="Вантажопід'ємність (т)">
+        <p style="color: #2C3A47; font-family: Tahoma;">Додати маршрутний лист </p>
+            <input type="text" pattern="\d{2}[.]\d{2}[.]\d{2}" name="date" placeholder="Дата">
+            <input type="number" pattern="\d+" name="distance" placeholder="Відстань (км)">
+        <p><input type="submit" value="Додати"></p>
+        <p>Редагувати маршрутний лист</p>
+        <select name="drive">
+          $drivers
+        </select>
+        <p>
+        <select name="date1">
+          $date
+        </select>   <input type="text" pattern="\d{2}[.]\d{2}[.]\d{2}" name="date2" placeholder="Дата"></p>
+        <select name="distance1">
+          $distance
+        </select>   <input type="number" pattern="\d+" name="distance2" placeholder="Відстань (км)">   <input type="submit" value="Змінити">
+        <p>Видалити маршрутний лист</p>
+        <select name="drive1">
+          $drivers
+        </select>   <input type="text" pattern="\d{2}[.]\d{2}[.]\d{2}" name="date3" placeholder="Дата">
+        <input type="submit" value="Видалити"><p>
+    </form>
+
+</body>
+</html>

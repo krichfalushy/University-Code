@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Розрахунок плати за період</title>
+    <style>
+        input {
+            border: 2px solid #dfe4ea;
+            border-radius: 15px;
+            font-size: 15px;
+            padding: 5px;
+            width: 200px;
+        }
+        input:hover {
+            border: 2px solid #747d8c;
+            color: #ced6e0;
+        }
+        select {
+            border: 2px solid #dfe4ea;
+            border-radius: 15px;
+            font-size: 15px;
+            padding: 5px;
+            width: 200px;
+        }
+        select:hover {
+            border: 2px solid #747d8c;
+            color: #ced6e0;
+        }
+        p {
+            color: #2C3A47;
+            font-family: Tahoma;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+  <h1 style="color: #2C3A47; font-family: Tahoma;">Розрахунок плати за заданий період</h1>
+  <form method="POST" action="/count_payment">
+      <br>
+      <select name="drive">
+          $drivers
+      </select>
+      <input type="text" pattern="\d{2}[.]\d{2}[.]\d{2}" name="from" placeholder="Перша дата (01.01.99)">
+      <input type="text" pattern="\d{2}[.]\d{2}[.]\d{2}" name="to" placeholder="Друга дата (01.01.99)">
+      <input type="submit" value="Розрахувати">
+      <p><span style="color: #f0932b">Результат минулої дії</span>: $result1</p>
+      <p><a href="/"> Повернутися на головну</a></p>
+
+
+  </form>
+</body>
+</html>
