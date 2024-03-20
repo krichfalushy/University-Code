@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<data>
+    <vodiy>
+        <name weight="4">Ігорович Василь Павлович</name>
+        <name weight="3">Шухевич Віктор Сергійович</name>
+        <name weight="5">Семенко Іван Степанович</name>
+        <name weight="25">Огієнко Микола Миколайович</name>
+    <name weight="40">Іларіон Андрій Миколайович</name><name weight="100">Кириленко Людочка Михайлівна</name></vodiy>
+
+    <routelist>
+        <name date="21.02.23" distance="20">Ігорович Василь Павлович</name>
+        <name date="19.03.23" distance="10">Шухевич Віктор Сергійович</name>
+        <name date="20.04.23" distance="15">Ігорович Василь Павлович</name>
+        <name date="10.05.23" distance="50">Семенко Іван Степанович</name>
+        <name date="23.05.23" distance="15">Огієнко Микола Миколайович</name>
+        <name date="14.05.23" distance="30">Шухевич Віктор Сергійович</name>
+    <name date="14.05.23" distance="20">Іларіон Андрій Миколайович</name><name date="01.01.21" distance="40">Кириленко Людочка Михайлівна</name></routelist>
+
+</data>
