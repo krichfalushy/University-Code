@@ -52,3 +52,5 @@ if __name__ == "__main__":
         prefix_expr = f.readline().strip()
         result = to_infix(prefix_expr)
         print(result)
+
+    # url = r"https://eolymp.com/uk/problems/731"
