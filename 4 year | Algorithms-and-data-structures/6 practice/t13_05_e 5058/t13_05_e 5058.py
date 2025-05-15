@@ -66,3 +66,5 @@ if __name__ == "__main__":
             print(res)
 
     input_data.close()
+
+    # url = r"https://eolymp.com/uk/problems/5058"
