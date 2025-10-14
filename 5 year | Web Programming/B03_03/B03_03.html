@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[B]03.03 - Переглядач мемів з API</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #252526;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .description {
+            background: #2d2d30;
+            padding: 15px;
+            border-left: 4px solid #007acc;
+            margin: 20px 0;
+        }
+        .meme-container {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 5px;
+            min-height: 400px;
+            margin-top: 20px;
+            border: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .meme-image {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 5px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin-bottom: 15px;
+        }
+        .meme-title {
+            color: #4ec9b0;
+            font-size: 16px;
+            text-align: center;
+            padding: 10px;
+            background: #2d2d30;
+            border-radius: 5px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .loading {
+            color: #9cdcfe;
+            font-size: 1.1em;
+        }
+        .error {
+            color: #f48771;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        .info-panel {
+            background: #2d2d30;
+            padding: 15px;
+            border-left: 3px solid #4ec9b0;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .timer-section {
+            color: #9cdcfe;
+        }
+        .timer {
+            font-weight: bold;
+            color: #4ec9b0;
+            font-size: 1.2em;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .stats {
+            color: #dcdcaa;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>[B]03.03. Переглядач мемів з API 🤡</h1>
+
+        <div class="description">
+            <strong>Завдання:</strong> Напишіть програму для отримання мемів з API
+            <code>https://api.imgflip.com/get_memes</code>.
+            Обробіть відповідь із зазначеною структурою та оберіть випадковий мем через
+            <code>Math.floor(Math.random() * array.length)</code>.
+            Відобразіть отримане зображення на сторінці.
+            <br><br>
+            <strong>Вказівка:</strong> Застосуйте функцію <code>setTimeout()</code> для того,
+            щоб динамічно оновлювати його кожні 10 секунд.
+        </div>
+
+        <div class="meme-container" id="memeContainer">
+            <div class="loading">Завантаження мему...</div>
+        </div>
+
+        <div class="info-panel">
+            <div class="timer-section">
+                Наступне оновлення через: <span class="timer" id="timer">10</span> сек
+            </div>
+            <div class="stats" id="stats">
+                Завантажено мемів: <span id="memeCount">0</span>
+            </div>
+        </div>
+
+        <button id="refreshBtn">🔄 Оновити мем зараз</button>
+    </div>
+
+    <script>
+        let currentMemes = [];
+        let autoRefreshInterval;
+        let countdownInterval;
+        let timeLeft = 10;
+        let memeDisplayCount = 0;
+
+        const memeContainer = document.getElementById('memeContainer');
+        const timerElement = document.getElementById('timer');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const memeCountElement = document.getElementById('memeCount');
+
+        async function fetchMemes() {
+            try {
+                const response = await fetch('https://api.imgflip.com/get_memes');
+
+                if (!response.ok) {
+                    throw new Error('HTTP помилка! Статус: ' + response.status);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.memes) {
+                    currentMemes = data.data.memes;
+                    displayRandomMeme();
+                } else {
+                    throw new Error('Невірна структура відповіді API');
+                }
+            } catch (error) {
+                displayError('Помилка завантаження: ' + error.message);
+            }
+        }
+
+        function displayRandomMeme() {
+            if (currentMemes.length === 0) {
+                memeContainer.innerHTML = '<div class="error">Меми не знайдені</div>';
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * currentMemes.length);
+            const randomMeme = currentMemes[randomIndex];
+
+            memeContainer.innerHTML =
+                '<img src="' + randomMeme.url + '" ' +
+                'alt="' + randomMeme.name + '" ' +
+                'class="meme-image" ' +
+                'onerror="this.parentElement.innerHTML=\'<div class=&quot;error&quot;>Помилка завантаження зображення</div>\'">' +
+                '<div class="meme-title">' + randomMeme.name + '</div>';
+
+            memeDisplayCount++;
+            memeCountElement.textContent = memeDisplayCount;
+        }
+
+        function displayError(message) {
+            memeContainer.innerHTML = '<div class="error">' + message + '</div>';
+        }
+
+        function updateTimer() {
+            if (timeLeft === 0) {
+                timeLeft = 10;
+            } else {
+                timeLeft--;
+            }
+            timerElement.textContent = timeLeft;
+        }
+
+        function resetTimer() {
+            timeLeft = 10;
+            timerElement.textContent = timeLeft;
+        }
+
+        async function init() {
+            await fetchMemes();
+
+            autoRefreshInterval = setInterval(() => {
+                displayRandomMeme();
+                resetTimer();
+            }, 10000);
+
+            countdownInterval = setInterval(updateTimer, 1000);
+        }
+
+        refreshBtn.addEventListener('click', () => {
+            displayRandomMeme();
+            resetTimer();
+        });
+
+        init();
+    </script>
+</body>
+</html>
