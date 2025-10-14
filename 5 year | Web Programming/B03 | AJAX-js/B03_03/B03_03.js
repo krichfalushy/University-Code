@@ -9,89 +9,77 @@
 // ============================================
 
 let currentMemes = [];
-let autoRefreshInterval;
-let countdownInterval;
-let timeLeft = 10;
 let memeDisplayCount = 0;
-
-const memeContainer = document.getElementById('memeContainer');
-const timerElement = document.getElementById('timer');
-const refreshBtn = document.getElementById('refreshBtn');
-const memeCountElement = document.getElementById('memeCount');
+let timeLeft = 10;
 
 async function fetchMemes() {
     try {
         const response = await fetch('https://api.imgflip.com/get_memes');
-
+        
         if (!response.ok) {
             throw new Error('HTTP помилка! Статус: ' + response.status);
         }
 
         const data = await response.json();
-
+        
         if (data.success && data.data && data.data.memes) {
             currentMemes = data.data.memes;
+            console.log('Завантажено ' + currentMemes.length + ' мемів з API\n');
             displayRandomMeme();
         } else {
             throw new Error('Невірна структура відповіді API');
         }
     } catch (error) {
-        displayError('Помилка завантаження: ' + error.message);
+        console.error('Помилка завантаження: ' + error.message);
     }
 }
 
 function displayRandomMeme() {
     if (currentMemes.length === 0) {
-        memeContainer.innerHTML = '<div class="error">Меми не знайдені</div>';
+        console.log('Меми не знайдено');
         return;
     }
 
     const randomIndex = Math.floor(Math.random() * currentMemes.length);
     const randomMeme = currentMemes[randomIndex];
 
-    memeContainer.innerHTML =
-        '<img src="' + randomMeme.url + '" ' +
-        'alt="' + randomMeme.name + '" ' +
-        'class="meme-image" ' +
-        'onerror="this.parentElement.innerHTML=\'<div class=&quot;error&quot;>Помилка завантаження зображення</div>\'">' +
-        '<div class="meme-title">' + randomMeme.name + '</div>';
-
     memeDisplayCount++;
-    memeCountElement.textContent = memeDisplayCount;
+    
+    console.log('\n' + '='.repeat(60));
+    console.log('МЕМ 🤡#' + memeDisplayCount);
+    console.log('='.repeat(60));
+    console.log('Назва: ' + randomMeme.name);
+    console.log('URL: ' + randomMeme.url);
+    console.log('Розмір: ' + randomMeme.width + 'x' + randomMeme.height);
+    console.log('='.repeat(60) + '\n');
 }
 
-function displayError(message) {
-    memeContainer.innerHTML = '<div class="error">' + message + '</div>';
-}
-
+// Таймер зворотного відліку
 function updateTimer() {
     if (timeLeft === 0) {
         timeLeft = 10;
     } else {
         timeLeft--;
     }
-    timerElement.textContent = timeLeft;
-}
-
-function resetTimer() {
-    timeLeft = 10;
-    timerElement.textContent = timeLeft;
+    process.stdout.write('\rНаступне оновлення через: ' + timeLeft + ' сек  ');
 }
 
 async function init() {
+    console.log('Запуск програми переглядача мемів...\n');
+    
     await fetchMemes();
-
-    autoRefreshInterval = setInterval(() => {
+    
+    setInterval(() => {
         displayRandomMeme();
-        resetTimer();
+        timeLeft = 10;
     }, 10000);
 
-    countdownInterval = setInterval(updateTimer, 1000);
+    setInterval(updateTimer, 1000);
 }
 
-refreshBtn.addEventListener('click', () => {
-    displayRandomMeme();
-    resetTimer();
-});
-
 init();
+
+process.on('SIGINT', () => {
+    console.log('\n\nПрограму завершено. Показано мемів: ' + memeDisplayCount);
+    process.exit(0);
+});
