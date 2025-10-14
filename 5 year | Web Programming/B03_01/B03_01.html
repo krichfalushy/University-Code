@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[B]03.01 - Асинхронні функції з Promise.any()</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #252526;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+        }
+        .description {
+            background: #2d2d30;
+            padding: 15px;
+            border-left: 4px solid #007acc;
+            margin: 20px 0;
+        }
+        #output {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 5px;
+            min-height: 200px;
+            margin-top: 20px;
+            border: 1px solid #3e3e42;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .success {
+            color: #4ec9b0;
+        }
+        .error {
+            color: #f48771;
+        }
+        .info {
+            color: #9cdcfe;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>[B]03.01. Асинхронні функції з Promise.any()</h1>
+
+        <div class="description">
+            <strong>Завдання:</strong> Опишіть дві асинхронні функції, кожна з яких кидає виключення з ймовірністю 50%.
+            Викличте їх паралельно через <code>Promise.any()</code>. Виведіть повідомлення про успішність виконання програми.
+        </div>
+
+        <button onclick="runTest()">🔄 Запустити тест</button>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const outputDiv = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            outputDiv.appendChild(entry);
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        function clearOutput() {
+            outputDiv.innerHTML = '';
+        }
+
+        function asyncFunction1() {
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              const success = Math.random() >= 0.5;
+              if (success) {
+                resolve("Функція 1 виконалась успішно!");
+              } else {
+                reject(new Error("Щось пішло не так у функції 1..."));
+              }
+            }, 1000);
+          });
+        }
+
+        function asyncFunction2() {
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              const success = Math.random() >= 0.5;
+              if (success) {
+                resolve("Функція 2 виконалась успішно!");
+              } else {
+                reject(new Error("Щось пішло не так у функції 2..."));
+              }
+            }, 1500);
+          });
+        }
+
+        async function runTest() {
+            clearOutput();
+
+            log("=== Початок тестування Завдання [B]03.01 ===", "info");
+            log("Очікування результату від Promise.any()...", "info");
+            log("");
+
+            try {
+                const result = await Promise.any([asyncFunction1(), asyncFunction2()]);
+                log("Успіх! Перша успішна функція повернула:", "success");
+                log(result, "success");
+                log("");
+                log("Програма виконана успішно!", "success");
+            } catch (error) {
+                log("Обидві функції викинули помилки!", "error");
+                log("Деталі: " + error.message, "error");
+                log("");
+                log("Програма завершилась з помилками", "error");
+            }
+
+            log("");
+            log("=== Кінець тестування ===", "info");
+        }
+
+        window.addEventListener('load', () => {
+            log("Сторінка завантажена. Натисніть кнопку для запуску тесту.", "info");
+        });
+    </script>
+</body>
+</html>
