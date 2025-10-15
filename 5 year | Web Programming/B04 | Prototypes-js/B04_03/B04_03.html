@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Завдання B04.03 - Candy та Present</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(to bottom right, #f0f9ff, #e0f2fe, #fef3c7);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0369a1;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0f2fe;
+        }
+        h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #0c4a6e;
+            margin: 20px 0 12px 0;
+        }
+        h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0284c7;
+            margin: 16px 0 8px 0;
+        }
+        p {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        th {
+            background: #e0f2fe;
+            border: 1px solid #bae6fd;
+            color: #0c4a6e;
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+        }
+        tr:hover {
+            background: #f8fafc;
+        }
+        .candy-card {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            font-size: 0.95rem;
+        }
+        .present-box {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            border: 1px solid #bae6fd;
+            padding: 28px;
+            margin: 20px 0;
+            border-radius: 16px;
+        }
+        .weight-info {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            padding: 16px;
+            border-radius: 10px;
+            margin: 16px 0;
+            color: #92400e;
+        }
+        .suitable-candies {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+        .suitable-candies ul {
+            margin-top: 12px;
+            margin-left: 24px;
+        }
+        .suitable-candies li {
+            color: #065f46;
+            padding: 4px 0;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #0284c7;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍬 Завдання [B]04.03</h1>
+        <h2>Опис завдання</h2>
+        <p>Використовуючи прототипно-орієнтовану модель (без синтаксису <strong><code>class</code></strong>),
+            опишіть "супер-клас" <strong>Candy</strong>. Визначить ієрархію цукерок. Створіть кілька об'єктів-цукерок.
+            Зберіть дитячий подарунок <strong>Present</strong> з урахуванням його ваги. Знайдіть цукерки в подарунку,
+            що відповідають заданому діапазону вмісту цукру.</p>
+
+        <h2>Об'єкти-цукерки</h2>
+        <div id="candies-list"></div>
+
+        <h2>🎁 Формування подарунка</h2>
+        <div id="present-info"></div>
+
+        <h2>🔍 Пошук цукерок за вмістом цукру</h2>
+        <div id="search-results"></div>
+    </div>
+
+    <script>
+        function Candy(name, weight, sugarContent) {
+            this.name = name;
+            this.weight = weight;
+            this.sugarContent = sugarContent;
+        }
+
+        Candy.prototype.toString = function() {
+            return `${this.name} (вага: ${this.weight}г, цукор: ${this.sugarContent}%)`;
+        };
+
+        // Шоколадна цукерка
+        function ChocolateCandy(name, weight, sugarContent, cocoaPercent) {
+            Candy.call(this, name, weight, sugarContent);
+            this.cocoaPercent = cocoaPercent;
+            this.type = 'Шоколадна';
+        }
+        ChocolateCandy.prototype = Object.create(Candy.prototype);
+        ChocolateCandy.prototype.constructor = ChocolateCandy;
+
+        // Карамель
+        function Caramel(name, weight, sugarContent, flavor) {
+            Candy.call(this, name, weight, sugarContent);
+            this.flavor = flavor;
+            this.type = 'Карамель';
+        }
+        Caramel.prototype = Object.create(Candy.prototype);
+        Caramel.prototype.constructor = Caramel;
+
+        // Льодяник
+        function Lollipop(name, weight, sugarContent, shape) {
+            Candy.call(this, name, weight, sugarContent);
+            this.shape = shape;
+            this.type = 'Льодяник';
+        }
+        Lollipop.prototype = Object.create(Candy.prototype);
+        Lollipop.prototype.constructor = Lollipop;
+
+        // Подарунок Present
+        function Present(maxWeight) {
+            this.maxWeight = maxWeight;
+            this.candies = [];
+            this.currentWeight = 0;
+        }
+
+        Present.prototype.addCandy = function(candy) {
+            if (this.currentWeight + candy.weight <= this.maxWeight) {
+                this.candies.push(candy);
+                this.currentWeight += candy.weight;
+                return true;
+            }
+            return false;
+        };
+
+        Present.prototype.getTotalWeight = function() {
+            return this.currentWeight;
+        };
+
+        Present.prototype.findCandiesBySugarRange = function(minSugar, maxSugar) {
+            return this.candies.filter(candy =>
+                candy.sugarContent >= minSugar && candy.sugarContent <= maxSugar
+            );
+        };
+
+        Present.prototype.toString = function() {
+            let result = `Подарунок (макс. вага: ${this.maxWeight}г, поточна: ${this.currentWeight}г)\n`;
+            result += `Цукерок у подарунку: ${this.candies.length}\n`;
+            this.candies.forEach((candy, i) => {
+                result += `${i + 1}. ${candy.toString()}\n`;
+            });
+            return result;
+        };
+
+        // Цукерки
+        const candies = [
+            new ChocolateCandy('Червоний мак', 25, 45, 70),
+            new ChocolateCandy('Трюфель', 30, 50, 60),
+            new Caramel('Барбарис', 15, 85, 'барбарис'),
+            new Caramel('М\'ятна', 20, 80, 'м\'ята'),
+            new Lollipop('Чупа-чупс', 12, 90, 'куля'),
+            new Lollipop('Веселка', 18, 88, 'зірка'),
+            new ChocolateCandy('Рошен', 28, 48, 65),
+            new Caramel('Дюшес', 22, 82, 'груша')
+        ];
+
+        const candiesDiv = document.getElementById('candies-list');
+        let tableHTML = '<table><tr><th>№</th><th>Назва</th><th>Тип</th><th>Вага (г)</th><th>Цукор (%)</th></tr>';
+        candies.forEach((candy, i) => {
+            tableHTML += `<tr>
+                <td>${i + 1}</td>
+                <td>${candy.name}</td>
+                <td>${candy.type}</td>
+                <td>${candy.weight}</td>
+                <td>${candy.sugarContent}</td>
+            </tr>`;
+        });
+        tableHTML += '</table>';
+        candiesDiv.innerHTML = tableHTML;
+
+        const present = new Present(150);
+
+        const presentDiv = document.getElementById('present-info');
+        let presentHTML = '<div class="present-box">';
+        presentHTML += `<h3>Параметри подарунка</h3>`;
+        presentHTML += `<p><strong>Максимальна вага:</strong> ${present.maxWeight} г</p>`;
+        presentHTML += `<h4>Додаємо цукерки:</h4>`;
+
+        candies.forEach(candy => {
+            const added = present.addCandy(candy);
+            if (added) {
+                presentHTML += `<div class="candy-card">Додано: ${candy.toString()}</div>`;
+            } else {
+                presentHTML += `<div class="candy-card">Не вдалося додати: ${candy.toString()} (перевищено вагу)</div>`;
+            }
+        });
+
+        presentHTML += `<div class="weight-info">
+            <strong>Підсумкова вага подарунка:</strong> ${present.getTotalWeight()} г з ${present.maxWeight} г<br>
+            <strong>Кількість цукерок:</strong> ${present.candies.length} шт.
+        </div>`;
+        presentHTML += '</div>';
+        presentDiv.innerHTML = presentHTML;
+
+        const searchDiv = document.getElementById('search-results');
+        const ranges = [
+            { min: 40, max: 60 },
+            { min: 70, max: 90 },
+            { min: 0, max: 50 }
+        ];
+
+        let searchHTML = '';
+        ranges.forEach(range => {
+            const found = present.findCandiesBySugarRange(range.min, range.max);
+            searchHTML += `<div class="suitable-candies">`;
+            searchHTML += `<h4>Діапазон: ${range.min}% - ${range.max}%</h4>`;
+            if (found.length > 0) {
+                searchHTML += `<p><strong>Знайдено ${found.length} цукерок:</strong></p><ul>`;
+                found.forEach(candy => {
+                    searchHTML += `<li>${candy.toString()}</li>`;
+                });
+                searchHTML += '</ul>';
+            } else {
+                searchHTML += '<p><em>Цукерок у цьому діапазоні не знайдено</em></p>';
+            }
+            searchHTML += '</div>';
+        });
+        searchDiv.innerHTML = searchHTML;
+
+        console.log('=== Ієрархія прототипів ===');
+        console.log('candies[0] instanceof ChocolateCandy:', candies[0] instanceof ChocolateCandy);
+        console.log('candies[0] instanceof Candy:', candies[0] instanceof Candy);
+        console.log('candies[2] instanceof Caramel:', candies[2] instanceof Caramel);
+        console.log('candies[4] instanceof Lollipop:', candies[4] instanceof Lollipop);
+    </script>
+</body>
+</html>

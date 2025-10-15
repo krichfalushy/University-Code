@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Завдання B04.01 - Object.prototype.size()</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(to bottom right, #e0f2fe, #fef3c7);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0369a1;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0f2fe;
+        }
+        p {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        .test-result {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 16px 0;
+            transition: transform 0.2s;
+        }
+        .test-result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .test-result strong {
+            color: #0c4a6e;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+        .info {
+            color: #0284c7;
+            font-weight: 500;
+        }
+        .success {
+            color: #059669;
+            font-weight: 600;
+        }
+        obj {
+            background: #e0f2fe;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #0284c7;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Завдання [B]04.01</h1>
+        <h2>Опис завдання</h2>
+        <p>Мутуйте вбудований «клас» <strong>Object</strong> шляхом додавання у <strong>Object.prototype</strong> методу
+            <strong>size()</strong>, який повертає кількість власних полів об'єкта (тобто тих, які містяться
+            виключно в об'єкті і відсутні в прототипі).</p>
+
+        <h2>Тестування</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="B04_01.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Завдання B04.02 - Конструктори фігур</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(to bottom right, #f0f9ff, #e0f2fe, #fef3c7);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0369a1;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0f2fe;
+        }
+        p, li {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+        ul {
+            margin-left: 24px;
+            margin-bottom: 16px;
+        }
+        .shape-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 16px 0;
+            transition: transform 0.2s;
+        }
+        .shape-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .shape-type {
+            font-weight: 700;
+            color: #0c4a6e;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+        }
+        .result {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        .result strong {
+            color: #059669;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #0284c7;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Завдання [B]04.02</h1>
+        <h2>Опис завдання</h2>
+        <p>Використовуючи прототипно-орієнтовану модель (без синтаксису <strong><code>class</code></strong>),
+            опишіть такі конструктори:</p>
+        <ul>
+            <li><strong>Shape()</strong> для створення об'єктів з методом <strong><code>area()</code></strong>,
+                який повертає площу фігури.</li>
+            <li><strong>Ellipse(a, b)</strong> з методом <strong><code>area()</code></strong>,
+                який повертає площу еліпса.</li>
+            <li><strong>Circle(r)</strong> з методом <strong><code>area()</code></strong>,
+                який повертає площу круга.</li>
+        </ul>
+
+        <h2>Реалізація</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="B04_02.js"></script>
+</body>
+</html>
