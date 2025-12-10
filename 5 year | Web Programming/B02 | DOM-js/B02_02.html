@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Session Storage Task</title>
+</head>
+<body>
+
+    <h3>Збереження повідомлення</h3>
+    <input type="text" id="userInput" placeholder="Введіть текст">
+    <button id="saveBtn">Зберегти</button>
+
+    <div id="displayArea" style="margin-top: 20px; font-weight: bold; color: blue;"></div>
+
+    <script>
+        const input = document.getElementById('userInput');
+        const btn = document.getElementById('saveBtn');
+        const display = document.getElementById('displayArea');
+        const STORAGE_KEY = 'message';
+
+        // При завантаженні сторінки перевіряємо sessionStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedMessage = sessionStorage.getItem(STORAGE_KEY);
+            if (savedMessage) {
+                display.textContent = `Збережено у сесії: ${savedMessage}`;
+                input.value = savedMessage;
+            }
+        });
+
+        // Обробка кліку
+        btn.addEventListener('click', () => {
+            const text = input.value;
+            if (text) {
+                sessionStorage.setItem(STORAGE_KEY, text);
+                display.textContent = `Збережено у сесії: ${text}`;
+                alert('Текст збережено! Перезавантажте сторінку, щоб перевірити.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактор тексту</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #text-container { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; min-height: 100px; }
+        span { cursor: pointer; padding: 2px; }
+        span:hover { background-color: #f0f0f0; }
+
+        /* Клас для виділеного речення */
+        .selected { background-color: yellow; border: 1px dashed orange; }
+
+        .controls { display: flex; flex-direction: column; gap: 10px; max-width: 500px; }
+        .control-group { border: 1px solid #eee; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>Текстовий редактор</h2>
+
+    <div id="text-container">
+        <p><span>Це перше речення першого параграфа.</span> <span>Це друге речення.</span></p>
+        <p><span>Ось ще один параграф.</span></p>
+    </div>
+
+    <div class="controls">
+
+        <div class="control-group">
+            <input type="text" id="newParaText" placeholder="Текст для нового параграфа">
+            <button onclick="addParagraph()">a) Додати параграф в кінець</button>
+        </div>
+
+        <div class="control-group">
+            <strong>Обране речення:</strong> <span id="statusInfo">Немає</span>
+            <br>
+            <button onclick="deselectSentence()">c) Зняти виділення</button>
+        </div>
+
+        <div class="control-group">
+            <input type="text" id="editTextInput" placeholder="Новий текст речення">
+            <button onclick="editSelected()">d) Змінити текст виділеного</button>
+        </div>
+
+        <div class="control-group">
+            <input type="text" id="newSentenceInput" placeholder="Текст нового речення">
+            <button onclick="addSentence()">e) Додати речення (перед виділеним або в кінець)</button>
+        </div>
+
+        <div class="control-group">
+            <button onclick="deleteSelected()">f) Видалити виділене речення</button>
+        </div>
+
+        <div class="control-group">
+            <input type="number" id="paraIndex" placeholder="Номер параграфа (1, 2...)" style="width: 50px;">
+            <button onclick="deleteParagraph()">g) Видалити заданий параграф</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedElement = null;
+        const container = document.getElementById('text-container');
+        const statusInfo = document.getElementById('statusInfo');
+
+        // b) Виділення речення (Event Delegation)
+        container.addEventListener('click', function(e) {
+            if (e.target.tagName === 'SPAN') {
+                // Знімаємо попереднє виділення
+                if (selectedElement) {
+                    selectedElement.classList.remove('selected');
+                }
+
+                // Виділяємо нове
+                selectedElement = e.target;
+                selectedElement.classList.add('selected');
+
+                // Оновлюємо інтерфейс
+                statusInfo.textContent = selectedElement.textContent;
+                document.getElementById('editTextInput').value = selectedElement.textContent;
+            }
+        });
+
+        // a) Додавання параграфа
+        function addParagraph() {
+            const text = document.getElementById('newParaText').value || "Новий параграф.";
+            const p = document.createElement('p');
+            const span = document.createElement('span');
+            span.textContent = text;
+            p.appendChild(span);
+            container.appendChild(p);
+            document.getElementById('newParaText').value = "";
+        }
+
+        // c) Зняття виділення
+        function deselectSentence() {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+                statusInfo.textContent = "Немає";
+                document.getElementById('editTextInput').value = "";
+            }
+        }
+
+        // d) Змінення вмісту
+        function editSelected() {
+            if (!selectedElement) return alert("Спочатку виділіть речення!");
+            const newText = document.getElementById('editTextInput').value;
+            if (newText) {
+                selectedElement.textContent = newText;
+                statusInfo.textContent = newText;
+            }
+        }
+
+        // e) Додавання речення
+        function addSentence() {
+            const text = document.getElementById('newSentenceInput').value || "Нове вставлене речення.";
+            const newSpan = document.createElement('span');
+            newSpan.textContent = " " + text;
+
+            if (selectedElement) {
+
+                selectedElement.parentElement.insertBefore(newSpan, selectedElement);
+            } else {
+
+                const lastP = container.lastElementChild;
+                if (lastP) {
+                    lastP.appendChild(newSpan);
+                } else {
+
+                    const p = document.createElement('p');
+                    p.appendChild(newSpan);
+                    container.appendChild(p);
+                }
+            }
+        }
+
+        // f) Видалення речення
+        function deleteSelected() {
+            if (!selectedElement) return alert("Спочатку виділіть речення!");
+
+            const parentP = selectedElement.parentElement;
+
+            parentP.removeChild(selectedElement);
+
+            if (parentP.children.length === 0) {
+                parentP.remove();
+            }
+
+            deselectSentence();
+        }
+
+        // g) Видалення заданого параграфа
+        function deleteParagraph() {
+            const index = parseInt(document.getElementById('paraIndex').value);
+            const paragraphs = container.querySelectorAll('p');
+
+            if (!index || index < 1 || index > paragraphs.length) {
+                alert("Невірний номер параграфа");
+                return;
+            }
+
+            paragraphs[index - 1].remove();
+
+            if (selectedElement && !document.body.contains(selectedElement)) {
+                deselectSentence();
+            }
+        }
+    </script>
+</body>
+</html>
