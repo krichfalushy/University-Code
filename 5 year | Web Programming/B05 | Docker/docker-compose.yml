@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # 1. Сервіс бази даних MySQL
+  db:
+    image: mysql:8.0
+    container_name: task_mysql
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+
+  # 2. Веб-додаток phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: task_pma
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+
+  # 3. Простий застосунок на Python
+  python-app:
+    build: .
+    container_name: task_python
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+volumes:
+  db_data:
