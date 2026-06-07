@@ -1,0 +1,40 @@
+digraph Builder {
+  rankdir=BT;
+  graph [fontname="DejaVu Sans", bgcolor="white", nodesep=0.5, ranksep=0.9, label="Шаблон Будівельник — Автомобільний завод", labelloc="t", fontsize=14];
+  node  [shape=record, fontname="DejaVu Sans", fontsize=10];
+  edge  [fontname="DejaVu Sans", fontsize=9];
+
+  Director [label="{Director|+ buildEconomySedan(color) : Car\l+ buildPremiumSUV(color) : Car\l+ buildElectricHatchback(color) : Car\l}"];
+
+  Car [label="{Car|- type : Type\l- carColor : CarColor\l- engine : Engine\l- wheel : Wheel\l- transmission : Transmission\l|+ toString() : String\l}"];
+  CarBuilder [label="{Car.Builder|+ type(..) : Builder\l+ color(..) : Builder\l+ engine(..) : Builder\l+ wheel(..) : Builder\l+ transmission(..) : Builder\l+ build() : Car\l}"];
+
+  Engine [label="{Engine|- power, torque : int\l- fuel : Fuel\l- volume : float\l}"];
+  EngineBuilder [label="{Engine.Builder|+ power/torque/fuel/volume(..)\l+ build() : Engine\l}"];
+
+  Wheel [label="{Wheel|- material : Material\l- diameter : int\l}"];
+  WheelBuilder [label="{Wheel.Builder|+ material/diameter(..)\l+ build() : Wheel\l}"];
+
+  Transmission [label="{Transmission|- type : Type\l- gears : int\l}"];
+  TransmissionBuilder [label="{Transmission.Builder|+ type/gears(..)\l+ build() : Transmission\l}"];
+
+  // Director використовує білдери
+  edge [arrowhead=vee, style=dashed];
+  Director -> CarBuilder [label="uses"];
+  Director -> EngineBuilder [label="uses"];
+  Director -> WheelBuilder [label="uses"];
+  Director -> TransmissionBuilder [label="uses"];
+
+  // Білдери створюють продукти
+  edge [arrowhead=vee, style=dashed];
+  CarBuilder -> Car [label="creates"];
+  EngineBuilder -> Engine [label="creates"];
+  WheelBuilder -> Wheel [label="creates"];
+  TransmissionBuilder -> Transmission [label="creates"];
+
+  // Car композиційно містить складові (агрегація)
+  edge [arrowhead=none, arrowtail=diamond, dir=back, style=solid, label=""];
+  Car -> Engine;
+  Car -> Wheel;
+  Car -> Transmission;
+}
