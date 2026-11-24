@@ -1,0 +1,299 @@
+---
+title: "Завдання 3. Ієрархічна кластеризація"
+author: "студентки 2 курсу магістратури, групи МатШІ, Крічфалуши Дар'ї"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: pdflatex
+  html_document:
+    df_print: paged
+header-includes:
+- \usepackage[T2A]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage[ukrainian]{babel}
+- \usepackage{tempora}
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+- \usepackage{geometry}
+---
+
+## Частина 2
+
+Застосувати ієрархічний кластерний аналіз до даних, обраних для самостійного дослідження,
+використати різні відстані та різні методи кластеризації, порівняти результати
+з отриманими у Завданні 1.
+
+Дані: [Beer Profile and Ratings Data Set](https://www.kaggle.com/datasets/ruthgn/beer-profile-and-ratings-data-set)
+(файл `beer_profile_and_ratings.csv`, 3197 сортів пива).
+
+- Об'єкти: сорти пива (та сама випадкова підвибірка з 2000, що у Завданнях 1 і 2)
+- Змінні (стандартизовані): ABV, Body, Bitter, Sweet, Sour, Fruits, Hoppy, Malty
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,
+                      dev="png", dpi=150,
+                      fig.width=7, fig.height=5, fig.align="center")
+library(cluster)      # pam(), silhouette()
+library(dendextend)   # cut() для дендрограм
+library(fossil)       # rand.index()
+library(mclust)       # adjustedRandIndex()
+```
+
+
+### Імпорт даних
+```{r data}
+beer.raw <- read.csv("beer_profile_and_ratings.csv")
+vars <- c("ABV", "Body", "Bitter", "Sweet", "Sour", "Fruits", "Hoppy", "Malty")
+
+set.seed(12345)
+beer <- beer.raw[sample(nrow(beer.raw), 2000), ]
+rownames(beer) <- NULL
+
+frame <- scale(beer[, vars])
+dim(frame)
+```
+
+Метод центроїдів за Гартіганом-Вонгом
+```{r best}
+set.seed(12345)
+km.res <- kmeans(frame, centers=5, algorithm="Hartigan-Wong", nstart=50)
+cl.km <- km.res$cluster
+table(cl.km)
+
+pal <- c("black","red","blue","green","magenta","chocolate",
+         "darkblue","darkred","aquamarine","grey")
+```
+
+
+### 1. Дендрограми: різні відстані та методи зв'язку
+
+Крім трьох методів із частини 1 (одного, повного і середнього зв'язку) додаємо **метод Варда**
+(`ward.D2`), який мінімізує приріст внутрішньокластерної суми квадратів і тому ближчий
+за ідеєю до методу центроїдів із Завдання 1.
+
+```{r hclust}
+ds <- c("euclidean", "manhattan", "maximum")
+ms <- c("single", "complete", "average", "ward.D2")
+ds.ua <- c(euclidean="евклідова", manhattan="манхеттенська", maximum="максимальна")
+ms.ua <- c(single="одного зв'язку", complete="повного зв'язку",
+           average="середнього зв'язку", ward.D2="Варда")
+sh.d <- c(euclidean="евкл.", manhattan="манх.", maximum="макс.")
+sh.m <- c(single="один.", complete="повн.", average="серед.", ward.D2="Вард")
+
+D <- lapply(ds, function(d) dist(frame, method=d))
+names(D) <- ds
+
+hc <- list()
+for (d in ds) for (m in ms) hc[[paste(d, m, sep=".")]] <- hclust(D[[d]], method=m)
+
+length(hc)
+```
+
+```{r dendro-grid, fig.width=10, fig.height=11}
+par(mfrow=c(4, 3), mar=c(1, 4, 3, 1))
+for (m in ms) for (d in ds) {
+  hcd <- as.dendrogram(hc[[paste(d, m, sep=".")]])
+  plot(hcd, leaflab="none", main=paste0(ms.ua[m], ",\n", ds.ua[d]))
+}
+par(mfrow=c(1, 1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+#### 1.1 Висоти злиття
+
+```{r heights}
+top.h <- sapply(hc, function(h) rev(h$height)[1:10])
+rownames(top.h) <- paste0("k=", 2:11)
+knitr::kable(round(t(top.h), 2), caption="Десять найбільших висот злиття")
+```
+
+```{r heights-plot, fig.width=10, fig.height=8}
+par(mfrow=c(4, 3), mar=c(4, 4, 3, 1))
+for (m in ms) for (d in ds) {
+  h <- hc[[paste(d, m, sep=".")]]
+  hh <- rev(h$height)[1:12]
+  plot(2:13, hh, type="b", pch=19, xlab="k", ylab="висота злиття",
+       main=paste0(sh.m[m], ", ", ds.ua[d]), cex.main=0.95)
+  grid(col="lightgray", lty="dotted")
+}
+par(mfrow=c(1, 1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+
+### 2. Кофенетичні відстані та кофенетична кореляція
+
+```{r cophenetic}
+coph.cor <- matrix(NA, length(ds), length(ms), dimnames=list(ds.ua[ds], ms.ua[ms]))
+for (d in ds) for (m in ms) {
+  coph <- cophenetic(hc[[paste(d, m, sep=".")]])
+  coph.cor[ds.ua[d], ms.ua[m]] <- cor(coph, D[[d]])
+  rm(coph)
+}
+knitr::kable(round(coph.cor, 4), caption="Кофенетична кореляція")
+
+best <- which(coph.cor == max(coph.cor), arr.ind=TRUE)
+best.d <- ds[best[1, "row"]]
+best.m <- ms[best[1, "col"]]
+cat("Найвища кофенетична кореляція:", ds.ua[best.d], "відстань,", ms.ua[best.m],
+    "-", round(max(coph.cor), 4), "\n")
+```
+
+
+### 3. Обрізання дендрограм і розміри кластерів
+
+Перш ніж порівнювати розбиття з Завданням 1, перевіримо розміри кластерів: для даних
+без вираженої кластерної структури методи одного та середнього зв'язку схильні до
+"ланцюжкового" ефекту, коли утворюється один гігантський кластер і кілька кластерів
+з одного-двох об'єктів.
+
+```{r sizes}
+k.opt <- 5
+sizes <- data.frame(
+  Відстань = ds.ua[rep(ds, each=length(ms))],
+  Метод    = ms.ua[rep(ms, times=length(ds))],
+  Розміри  = sapply(paste(rep(ds, each=length(ms)), rep(ms, times=length(ds)), sep="."),
+                    function(nm) paste(sort(table(cutree(hc[[nm]], k.opt)),
+                                            decreasing=TRUE), collapse=", ")),
+  row.names = NULL)
+knitr::kable(sizes, caption=paste0("Розміри кластерів при обрізанні на k = ", k.opt))
+```
+
+### 4. Порівняння з результатами Завдання 1
+
+```{r compare}
+cl.hc <- list()
+info <- NULL
+for (d in ds) for (m in ms) for (k in c(3, 5)) {
+  nm <- paste0(sh.d[d], "/", sh.m[m], "/k=", k)
+  cl.hc[[nm]] <- cutree(hc[[paste(d, m, sep=".")]], k=k)
+  info <- rbind(info, data.frame(Відстань=ds.ua[d], Метод=ms.ua[m], k=k))
+}
+
+cmp <- data.frame(
+  info,
+  Найб.кластер = sapply(cl.hc, function(x) max(table(x))),
+  Ренда        = round(sapply(cl.hc, function(x) rand.index(x, cl.km)), 3),
+  Випр.Ренда   = round(sapply(cl.hc, function(x) adjustedRandIndex(x, cl.km)), 3),
+  Силует       = round(sapply(cl.hc, function(x)
+                       mean(silhouette(x, D$euclidean)[, 3])), 3),
+  row.names = NULL)
+knitr::kable(cmp, caption="Порівняння ієрархічних розбиттів з розбиттям k-середніх (k = 5) із Завдання 1")
+
+cat("Для довідки: середній силует розбиття k-середніх (k = 5) =",
+    round(mean(silhouette(cl.km, D$euclidean)[, 3]), 3), "\n")
+```
+
+**Зауваження.** Для вироджених розбиттів (один великий кластер плюс
+кластери-одинаки) середній силует може бути дуже високим, хоча розбиття неінформативне.
+Перевіримо це на найгіршому випадку:
+
+```{r degenerate}
+hc.sc <- hclust(D$euclidean, method="complete")
+for (k in 2:4) {
+  ct <- cutree(hc.sc, k)
+  cat("повний зв'язок, k =", k, ": розміри", paste(table(ct), collapse=", "),
+      "; середній силует", round(mean(silhouette(ct, D$euclidean)[, 3]), 3), "\n")
+}
+```
+
+#### 4.1 Найкраще ієрархічне розбиття
+
+Вибираємо розбиття з найвищим узгодженням із Завданням 1 серед невироджених
+(найбільший кластер не перевищує половини вибірки).
+
+```{r pick}
+ok <- cmp$Найб.кластер <= nrow(frame) / 2
+cmp.ok <- cmp[ok, ]
+i.best <- which.max(cmp.ok$Випр.Ренда)
+cmp.ok[i.best, ]
+
+nm.best <- names(cl.hc)[ok][i.best]
+cl.best <- cl.hc[[nm.best]]
+table(cl.best)
+```
+
+Таблиця спряженості з розбиттям k-середніх із Завдання 1:
+
+```{r table-best}
+table(Ієрархічне=cl.best, `k-середні`=cl.km)
+```
+
+
+Порівняння також з методом медоїдів із Завдання 1 (PAM, евклідова відстань, k = 4):
+
+```{r pam}
+pam.res <- pam(D$euclidean, 4)
+cat("Ієрархічне проти PAM:  Ренда =", round(rand.index(cl.best, pam.res$clustering), 3),
+    "; виправлений =", round(adjustedRandIndex(cl.best, pam.res$clustering), 3), "\n")
+cat("k-середні проти PAM:   Ренда =", round(rand.index(cl.km, pam.res$clustering), 3),
+    "; виправлений =", round(adjustedRandIndex(cl.km, pam.res$clustering), 3), "\n")
+```
+
+
+### 5. Верхня та нижні частини дендрограми
+
+```{r upper}
+hc.b <- hc[[paste(ds[which(ds.ua == cmp.ok[i.best, "Відстань"])],
+                  ms[which(ms.ua == cmp.ok[i.best, "Метод"])], sep=".")]]
+k.b <- cmp.ok[i.best, "k"]
+
+hcd.b <- as.dendrogram(hc.b)
+hh <- rev(hc.b$height)
+h.cut <- mean(c(hh[k.b - 1], hh[k.b]))
+cat("Рівень обрізання h =", round(h.cut, 2), "дає",
+    length(unique(cutree(hc.b, h=h.cut))), "кластерів\n")
+
+plot(hcd.b, leaflab="none",
+     main=paste0("Дендрограма: ", cmp.ok[i.best, "Метод"], ", ",
+                 cmp.ok[i.best, "Відстань"], " відстань"))
+abline(h=h.cut, col="red", lty=2)
+```
+
+```{r upper-lower, fig.width=10, fig.height=4.5}
+cut.res <- cut(hcd.b, h=h.cut)
+hup <- cut.res$upper
+labels(hup) <- letters[1:k.b]
+plot(hup, main="Верхня частина дендрограми")
+```
+
+```{r lower, fig.width=10, fig.height=5}
+par(mfrow=c(2, ceiling(k.b / 2)), mar=c(1, 4, 3, 1))
+for (i in 1:k.b) plot(cut.res$lower[[i]], leaflab="none", main=letters[i])
+par(mfrow=c(1, 1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+### 6. Змістовна інтерпретація ієрархічного розбиття
+
+```{r styles}
+top.styles <- sapply(sort(unique(cl.best)), function(j) {
+  t <- sort(table(beer$Style[cl.best == j]), decreasing=TRUE)
+  paste0(names(t)[1:3], " (", t[1:3], ")", collapse="; ")
+})
+data.frame(Кластер = letters[sort(unique(cl.best))],
+           Розмір  = as.vector(table(cl.best)),
+           Топ_3_стилі = top.styles, row.names=NULL)
+```
+
+```{r centers}
+centers <- aggregate(frame, by=list(Кластер=cl.best), FUN=mean)
+knitr::kable(round(centers, 2),
+             caption="Середні стандартизовані значення ознак по кластерах")
+```
+
+
+### 7. Відображення розбиття
+
+```{r pairs}
+pairs(frame, cex=0.4, pch=19, col=pal[cl.best],
+      main=paste0("Ієрархічна кластеризація (", cmp.ok[i.best, "Метод"], ", ",
+                  cmp.ok[i.best, "Відстань"], "), k=", k.b))
+```
+
+```{r pca}
+pc <- princomp(frame)
+plot(pc$scores[, 1:2], col=pal[cl.best], cex=1, type="n",
+     xlab="Comp.1", ylab="Comp.2",
+     main="Ієрархічне розбиття у просторі перших двох головних компонент")
+text(pc$scores[, 1:2], labels=letters[cl.best], col=pal[cl.best], cex=0.6)
+```
+
+

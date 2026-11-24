@@ -1,0 +1,425 @@
+---
+title: "Завдання 1. Кластеризація з відомою кількістю кластерів"
+author: "студентки 2 курсу магістратури, групи МатШІ, Крічфалуши Дар'ї"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+  html_document:
+    df_print: paged
+  word_document: default
+header-includes:
+- \usepackage[T2A]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage[ukrainian]{babel}
+- \usepackage{tempora}
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+- \usepackage{geometry}
+---
+
+
+## Частина 2
+
+### Кластеризація сортів пива
+
+Кластеризація власних даних, датасет: [Beer Profile and Ratings Data Set](https://www.kaggle.com/datasets/ruthgn/beer-profile-and-ratings-data-set) із 3197 сортів пива з профілем смакових характеристик та оцінками від користувачів. Датасет багатий на змінні, адже нам відомі: назва, стиль, виробник, тощо -- це все метадані, та числові смакові характеристики, що будуть нашими змінними.
+
+- Об'єкти кластеризації: сорти пива
+- Змінні:
+    1) abv (вміст алкоголю)
+    2) body (наскільки напій густий/насичений)
+    3) bitter (ibu, гіркота)
+    4) sweet
+    5) sour (кисле)
+    6) fruits
+    7) hoppy (хмелеве)
+    8) malty (солодове)
+    
+**Мета кластеризації**: розкласти різні сорти пива на групи зі схожим смаковим профілем і перевірити, чи відповідають ці групи традиційним стилям пива (IPA, lager, stout тощо)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,
+                      dev="cairo_pdf", fig.width=7, fig.height=5, fig.align="center")
+library(cluster) # pam(), silhouette()
+library(fossil)  # rand.index()
+library(mclust)  # adjustedRandIndex()
+set.seed(12345)
+```
+
+### 1. Зчитування даних
+```{r read}
+beer.raw <- read.csv("beer_profile_and_ratings.csv")
+head(data, 5)
+```
+
+#### 1.1 Запишемо змінні для кластеризації:
+
+```{r values}
+vars <- c("ABV", "Body", "Bitter", "Sweet", "Sour", "Fruits", "Hoppy", "Malty")
+
+colSums(is.na(beer.raw[, vars]))
+
+# Спробую спочатку на 2000 даних, перевірити обчислюваність
+set.seed(12345)
+beer <- beer.raw[sample(nrow(beer.raw), 2000),]
+rownames(beer) <- NULL
+dim(beer)
+```
+
+```{r head}
+head(beer[, c("Style", vars)], 5)
+summary(beer)
+```
+
+#### 1.2 Стандартизація
+
+```{r scale}
+frame <- scale(beer[, vars])
+summary(frame)
+```
+
+### 2. Метод центроїдів (Ллойда, Мак-Квіна, Гартігана-Вонга)
+```{r kmax}
+k.max <- 20
+```
+
+#### 2.1 метод центроїдів (Ллойда)
+```{r kmlloyd}
+ll.wss <- rep(NA, k.max)
+ll.bss <- rep(NA, k.max)
+
+set.seed(12345)
+for (k in 2:k.max) {
+  km.res <- kmeans(frame, centers=k, algorithm="Lloyd", nstart=10)
+  ll.wss[k] <- km.res$tot.withinss
+  ll.bss[k] <- km.res$betweenss
+}
+
+print(ll.wss[2:10])
+print(ll.bss[2:10])
+```
+
+#### 2.2 метод центроїдів (Мак-Квіна)
+```{r kmmacq}
+macq.wss <- rep(NA, k.max)
+macq.bss <- rep(NA, k.max)
+
+set.seed(12345)
+for (k in 2:k.max) {
+  km.res <- kmeans(frame, centers=k, algorithm="MacQueen", nstart=10)
+  macq.wss[k] <- km.res$tot.withinss
+  macq.bss[k] <- km.res$betweenss
+}
+print(macq.wss[2:10])
+print(macq.bss[2:10])
+```
+
+#### 2.3 метод центроїдів (Гартігана-Вонга)
+```{r kmhw}
+hw.wss <- rep(NA, k.max)
+hw.bss <- rep(NA, k.max)
+for (k in 2:k.max) {
+  km.res <- kmeans(frame, centers=k, algorithm="Hartigan-Wong", nstart=10)
+  hw.wss[k] <- km.res$tot.withinss
+  hw.bss[k] <- km.res$betweenss
+}
+print(hw.wss[2:10])
+print(hw.bss[2:10])
+```
+
+#### 2.4 Графіки WSS та оптимальний вибір кількості кластерів
+```{r wwsgraph}
+# Ллойд
+plot(2:k.max, ll.wss[2:k.max], type='b', pch=19, xaxt='n',
+     xlab='Кількість кластерів (k)',
+     ylab='Внутрішньокластерна сума квадратів (WSS)',
+     main='Графік WSS (Ллойд)')
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+
+# Мак-Квін
+plot(2:k.max, macq.wss[2:k.max], type='b', pch=19, xaxt='n',
+     xlab='Кількість кластерів (k)',
+     ylab='Внутрішньокластерна сума квадратів (WSS)',
+     main='Графік WSS (Мак-Квін)')
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+
+# Гартіган-Вонг
+plot(2:k.max, hw.wss[2:k.max], type='b', pch=19, xaxt='n',
+     xlab='Кількість кластерів (k)',
+     ylab='Внутрішньокластерна сума квадратів (WSS)',
+     main='Графік WSS (Гартіган-Вонг)')
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+```
+
+```{r wsstable}
+ks <- 2:k.max
+tab.ratio <- data.frame(k=ks, Lloyd=ll.bss[ks]/ll.wss[ks],
+                        MacQueen=macq.bss[ks]/macq.wss[ks],
+                        `Hartigan-Wonk`=hw.bss[ks]/hw.wss[ks])
+knitr::kable(tab.ratio, digits=2, caption='Відношення BSS/WSS')
+```
+
+#### 2.5 Висновок (1)
+Насправді, за графіками WSS для трьох різних методів центроїдів важко сказати, в якому місці відбувається різкий спад для вибору оптимальної k. Усі три графіки значень оцінки спадають рівномірно.
+
+А от за таблицею співвідношень BSS/WSS вже можна розгледіти, що +- суттєвий відрив відбувається k=від 2 до 5. Тобто, оптимальну кількість кластерів можна обирати з цього діапазону.
+
+Для визначеності я скористаюся ще методом середніх силуетів:
+```{r kmsilhouette}
+set.seed(12345)
+
+km.dis <- dist(frame)
+ll.sil <- rep(NA, k.max)
+
+for (k in 2:k.max) {
+  km.res <- kmeans(frame, centers=k, algorithm="Lloyd", nstart=10)
+  ll.sil[k] <- mean(silhouette(km.res$cluster, km.dis)[, 3])
+}
+
+plot(2:k.max, ll.sil[2:k.max], type="b", pch=19, xaxt="n",
+     xlab="Кількість кластерів (k)", ylab="Середній силует",
+     main="Середні силуети (метод Ллойда)")
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+```
+Вийшло цікаво! Найбільший показник середнього силуету це 0.28 (k=5). Показник невеликий, але оптимальну кількість кластерів візьмемо **k=5**.
+
+### 3. Порівняння розбиття методами індекс Ренда та виправлений індекс Ренда
+```{r rand}
+k.opt <- 5
+
+set.seed(12345)
+km.ll <- kmeans(frame, centers=k.opt, algorithm='Lloyd', nstart=50)
+km.mq <- kmeans(frame, centers=k.opt, algorithm='MacQueen', nstart=50)
+km.hw <- kmeans(frame, centers=k.opt, algorithm='Hartigan-Wong', nstart=50)
+
+km.list <- list('Ллойд'=km.ll, 'Мак-Квін'=km.mq, 'Гартіган-Вонг'=km.hw)
+cl.list <-lapply(km.list, function(r) r$cluster)
+
+
+nm <- names(cl.list)
+R.mat <- outer(nm, nm, Vectorize(function(a, b) rand.index(cl.list[[a]], cl.list[[b]])))
+AR.mat <- outer(nm, nm, Vectorize(function(a, b) adjustedRandIndex(cl.list[[a]], cl.list[[b]])))
+
+dimnames(R.mat) <- dimnames(AR.mat) <- list(nm, nm)
+
+cat("Індекс Ренда:\n"); print(round(R.mat, 4))
+cat("\nВиправлений індекс Ренда:\n"); print(round(AR.mat, 4))
+
+```
+Таблиці спряженості:
+```{r tabkm}
+table(Lloyd=cl.list[[1]], MacQueen=cl.list[[2]])
+table(Lloyd=cl.list[[1]], `Hartigan-Wong`=cl.list[[3]])
+table(MacQueen=cl.list[[2]], `Hartigan-Wong`=cl.list[[3]])
+```
+
+#### 2.5 Висновок (2)
+1) Згідно індексів Ренда, ми бачимо, що метод Ллойда не набагато, але відрізняється від Мак-Квіна та Гартігана-Вонга для даного датасету, в той час як 2 останні методи показують абсолютну схожість між собою.
+
+2) Також, за табилцею спряженості можна зробити висновок, що хоча б 1 кластер можна розбити це на два маленьких -- кластер із 702 елементами. Скоріше за все, це будуть два різних, але близьких хмарок. Проте, згідно наявного аналізу вже видно, що кластеризація не буде досить очевидною.
+
+### 4. Матричні діаграми розсіювання
+```{r scattermatrix}
+
+pal <- c("black","red","blue","green","magenta","chocolate",
+          "darkblue","darkred","aquamarine","grey")
+
+pairs(frame, cex=0.4, pch=19, col=pal[km.ll$cluster],
+      main=paste0("Матриця розсіювання (метод Ллойда) k=", k.opt))
+
+pairs(frame, cex=0.4, pch=19, col=pal[km.mq$cluster],
+      main=paste0("Матриця розсіювання (метод Мак-Квіна) k=", k.opt))
+
+pairs(frame, cex=0.4, pch=19, col=pal[km.hw$cluster],
+      main=paste0("Матриця розсіювання (метод Гартігана-Вонга) k=", k.opt))
+```
+
+Вийшло непогано, проте, я б зробила висновок, що можна спробувати розбити на 6 кластерів.
+```{r kmnew1}
+k.opt <- 6
+
+set.seed(12345)
+km.ll <- kmeans(frame, centers=k.opt, algorithm='Lloyd', nstart=50)
+km.mq <- kmeans(frame, centers=k.opt, algorithm='MacQueen', nstart=50)
+
+pairs(frame, cex=0.4, pch=19, col=pal[km.ll$cluster],
+      main=paste0("Матриця розсіювання (метод Ллойда) k=", k.opt))
+
+pairs(frame, cex=0.4, pch=19, col=pal[km.mq$cluster],
+      main=paste0("Матриця розсіювання (метод Мак-Квіна) k=", k.opt))
+```
+#### 2.5 Висновок (3)
+Таке розбиття можливе, проте, складається враження, що так більш заплутано. Тобто залишу k=5. 
+
+Тим не менш, за допомогою матриці розсіювання ми бачимо, що це різні області одної безперервної хмари. Проте на деяких парах змінних (наприклад, Bitter-Sweet, Hoppy-Malty) кольори розділені досить чітко: один кластер займає "гіркий і хмельовий" сектор, інший -- "солодкий і солодовий", що відповідає дійсності. Адже гіркі хмільові сорти структурно відрізняються від солодових лагерів чи кислих ламбіків.
+
+```{r kmnew}
+k.opt <- 5
+
+set.seed(12345)
+km.ll <- kmeans(frame, centers=k.opt, algorithm='Lloyd', nstart=50)
+km.mq <- kmeans(frame, centers=k.opt, algorithm='MacQueen', nstart=50)
+km.hw <- kmeans(frame, centers=k.opt, algorithm='Hartigan-Wong', nstart=50)
+```
+
+#### 4.2 Вибір найкращого розбиття
+```{r wss}
+
+km.list <- list('Ллойд'=km.ll, 'Мак-Квін'=km.mq, 'Гартіган-Вонг'=km.hw)
+
+min(km.ll$tot.withinss, na.rm=TRUE)
+min(km.mq$tot.withinss, na.rm=TRUE)
+min(km.hw$tot.withinss, na.rm=TRUE)
+
+wss.all <- sapply(km.list, function(r) r$tot.withinss)
+best.nm <- names(which.min(wss.all))
+best.km <- km.list[[best.nm]]
+
+round(wss.all, 4)
+print(best.nm)
+```
+Метод Гартігана-Вонга зробило найкраще розбиття.
+
+### 5. Метод медоїдів (PAM)
+Провести кластеризацію методом медоїдів, використовуючи різні відстані між об'єктами: **евклідову**, **L1**, та **максимальну**.
+Оптимальну кількість кластерів обрати виходячи з графіка *середніх силуетів*.
+Провести порівняння отриманих результатів вик. індекс Ренда та виправлений індекс Ренда.
+
+#### 5.1 Евклідова метрика
+```{r eupam}
+
+dis.eucl <- dist(frame, method="euclidean")
+pam.eucl <- vector('list', k.max)
+sil.eucl <- rep(NA, k.max)
+
+for (k in 2:k.max) {
+  pam.eucl[[k]] <- pam(dis.eucl, k)
+  sil.eucl[k] <- mean(silhouette(pam.eucl[[k]])[,3])
+}
+
+round(sil.eucl[2:k.max], 3)
+```
+
+#### 5.2 Сіті-блок метрика
+```{r manhattan}
+dis.manh <- dist(frame, method="manhattan")
+pam.manh <- vector('list', k.max)
+sil.manh <- rep(NA, k.max)
+
+for (k in 2:k.max) {
+  pam.manh[[k]] <- pam(dis.manh, k)
+  sil.manh[k] <- mean(silhouette(pam.manh[[k]])[,3])
+}
+
+round(sil.manh[2:k.max], 3)
+```
+
+#### 5.3 Максимальна метрика
+```{r maximum}
+dis.maxi <- dist(frame, method="maximum")
+pam.maxi <- vector('list', k.max)
+sil.maxi <- rep(NA, k.max)
+
+for (k in 2:k.max) {
+  pam.maxi[[k]] <- pam(dis.maxi, k)
+  sil.maxi[k] <- mean(silhouette(pam.maxi[[k]])[,3])
+}
+
+round(sil.maxi[2:k.max], 3)
+```
+
+#### 5.4 Графіки середніх силуетів
+```{r silhouette}
+# Евклідова
+plot(2:k.max, sil.eucl[2:k.max], type='b', pch=19, xaxt='n',
+     xlab='Кількість кластерів (k)',
+     ylab='Середній силует',
+     main='Середні силуети (Евклідоив метрика)')
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+points(which.max(sil.eucl), max(sil.eucl, na.rm=TRUE), col="red", pch=19, ces=1.6)
+
+# Сіті-блок
+plot(2:k.max, sil.manh[2:k.max], type='b', pch=19, xaxt='n',
+     xlab='Кількість кластерів (k)',
+     ylab='Середній силует',
+     main='Середні силуети (Сіті-блок метрика)')
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+points(which.max(sil.manh), max(sil.manh, na.rm=TRUE), col="red", pch=19, ces=1.6)
+
+# Максимальна
+plot(2:k.max, sil.maxi[2:k.max], type='b', pch=19, xaxt='n',
+     xlab='Кількість кластерів (k)',
+     ylab='Середній силует',
+     main='Середні силуети (Максимум метрика)')
+axis(1, at=2:k.max)
+grid(nx=NA, ny=NULL, col='lightgray', lty='dotted')
+abline(v=2:k.max, col='lightgray', lty='dotted')
+points(which.max(sil.maxi), max(sil.maxi, na.rm=TRUE), col="red", pch=19, ces=1.6)
+```
+
+#### 5.6 Індекс Ренда та виправлений індекс Ренда
+
+```{r randpam}
+nm <- c("Евклідова", "Сіті-блок", "Максимальна")
+k.eucl <- 4
+k.manh <- 2
+k.maxi <- 7
+
+cl.eucl <- pam.eucl[[k.eucl]]$clustering
+cl.manh <- pam.manh[[k.manh]]$clustering
+cl.maxi <- pam.maxi[[k.maxi]]$clustering
+
+# індекс Ренда
+r.em <- rand.index(cl.eucl, cl.manh)
+r.ex <- rand.index(cl.eucl, cl.maxi)
+r.mx <- rand.index(cl.manh, cl.maxi)
+
+R.mat <- matrix(c(1, r.em, r.ex,
+                  r.em, 1, r.mx,
+                  r.ex, r.mx, 1), nrow=3, byrow=TRUE,
+                  dimnames=list(nm, nm))
+
+# виправлений індекс Ренда
+ar.em <- adjustedRandIndex(cl.eucl, cl.manh)
+ar.ex <- adjustedRandIndex(cl.eucl, cl.maxi)
+ar.mx <- adjustedRandIndex(cl.manh, cl.maxi)
+
+AR.mat <- matrix(c(1, ar.em, ar.ex,
+                   ar.em, 1, ar.mx,
+                   ar.ex, ar.mx, 1), nrow=3, byrow=TRUE,
+                   dimnames=list(nm, nm))
+
+cat("Індекс Ренда:\n"); print(round(R.mat, 4))
+cat("\nВиправлений індекс Ренда:\n"); print(round(AR.mat, 4))
+```
+
+```{r tabpam}
+table(Euclid=cl.eucl, Manhattan=cl.manh)
+table(Euclid=cl.eucl, Maximum=cl.maxi)
+table(Manhattan=cl.manh, Maximum=cl.maxi)
+```
+
+### 6. Матричні діаграми розсіювання
+```{r mtrxpam}
+pairs(frame, cex=0.4, pch=19, col=pal[cl.eucl],
+      main=paste0("Матриця розсіювання (PAM, Евклідова метрика) k=", k.eucl))
+
+pairs(frame, cex=0.4, pch=19, col=pal[cl.manh],
+      main=paste0("Матриця розсіювання (PAM, L1 метрика) k=", k.manh))
+
+pairs(frame, cex=0.4, pch=19, col=pal[cl.maxi],
+      main=paste0("Матриця розсіювання (PAM, Максимум метрика) k=", k.maxi))
+```
+

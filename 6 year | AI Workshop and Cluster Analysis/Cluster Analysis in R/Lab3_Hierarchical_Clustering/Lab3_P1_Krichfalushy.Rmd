@@ -1,0 +1,296 @@
+---
+title: "Завдання 3. Ієрарїічна кластеризація"
+author: "студентки 2 курсу магістратури, групи МатШІ, Крічфалуши Дар'ї"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: pdflatex
+  html_document:
+    df_print: paged
+header-includes:
+- \usepackage[T2A]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage[ukrainian]{babel}
+- \usepackage{tempora}
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+- \usepackage{geometry}
+---
+
+# Варіант 4
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,
+                      dev="png", dpi=150,
+                      fig.width=7, fig.height=5, fig.align="center")
+library(cluster)      # silhouette()
+library(dendextend)   # cut() для дендрограм, верхня/нижні частини
+library(fossil)       # rand.index()
+library(mclust)       # adjustedRandIndex()
+```
+
+
+## Частина 1
+
+Застосувати техніку ієрархічної класифікації до даних з частини 1 Завдання 1:
+
+1. Методи одного, повного і середнього зв'язку; евклідова, манхеттенська і максимальна відстані; побудувати дендрограми, порівняти їх, зробити висновок про можливу кількість кластерів;
+2. Підрахувати кофенетичні відстані та коефіцієнти кореляції з відстанями між об'єктами; визначити, яка дендрограма найкраще відображає реальні відстані; за дендрограмами вибрати оптимальну кількість кластерів;
+3. Обрізати дендрограми на обраному рівні, отримати розбиття і порівняти результати з отриманими у Завданні 1.
+
+
+### Імпорт даних 
+```{r data}
+samp <- read.table("mult4.txt", header=TRUE)
+dim(samp)
+head(samp, 5)
+```
+
+Розбиття за Ллойдом
+```{r best}
+set.seed(12345)
+km.res <- kmeans(samp, centers=8, algorithm="Lloyd", nstart=50, iter.max=50)
+cl.km <- km.res$cluster
+table(cl.km)
+
+pal <- c("black","red","blue","green","magenta","chocolate",
+         "darkblue","darkred","aquamarine","grey")
+```
+
+
+### 1. Дендрограми: три методи зв'язку (*три відстані)
+
+Обчислюємо матриці відстаней і будуємо всі дев'ять дендрограм функцією `hclust()`.
+```{r hclust}
+ds <- c("euclidean", "manhattan", "maximum")
+ms <- c("single", "complete", "average")
+ds.ua <- c(euclidean="евклідова", manhattan="манхеттенська", maximum="максимальна")
+ms.ua <- c(single="одного зв'язку", complete="повного зв'язку", average="середнього зв'язку")
+
+# матриці відстаней рахуємо один раз і використовуємо повторно
+D <- lapply(ds, function(d) dist(samp, method=d))
+names(D) <- ds
+
+hc <- list()
+for (d in ds) for (m in ms) hc[[paste(d, m, sep=".")]] <- hclust(D[[d]], method=m)
+
+length(hc)
+```
+
+Зведене порівняння всіх дев'яти дендрограм (рядки - відстань, стовпці - метод зв'язку):
+```{r dendro-grid, fig.width=10, fig.height=9}
+par(mfrow=c(3, 3), mar=c(1, 4, 3, 1))
+for (d in ds) for (m in ms) {
+  hcd <- as.dendrogram(hc[[paste(d, m, sep=".")]])
+  plot(hcd, leaflab="none", main=paste0(ds.ua[d], ",\n", ms.ua[m]))
+}
+par(mfrow=c(1, 1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+#### 1.1 Можлива кількість кластерів за висотами злиття
+
+Кількість кластерів зручно визначати за найбільшими стрибками висот злиття: якщо між
+(k)-ю та (k+1)-ю за величиною висотами є великий розрив, то обрізання на цьому рівні
+дає стійке розбиття на k кластерів.
+```{r heights}
+top.h <- sapply(hc, function(h) rev(h$height)[1:10])
+rownames(top.h) <- paste0("k=", 2:11)
+knitr::kable(round(t(top.h), 2),
+             caption="Десять найбільших висот злиття (висота, на якій утворюється k-й кластер)")
+```
+
+```{r heights-plot, fig.width=10, fig.height=7}
+par(mfrow=c(3, 3), mar=c(4, 4, 3, 1))
+for (d in ds) for (m in ms) {
+  h <- hc[[paste(d, m, sep=".")]]
+  hh <- rev(h$height)[1:12]
+  plot(2:13, hh, type="b", pch=19, xlab="k", ylab="висота злиття",
+       main=paste0(ds.ua[d], ", ", ms.ua[m]), cex.main=0.95)
+  grid(col="lightgray", lty="dotted")
+}
+par(mfrow=c(1, 1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+Відношення сусідніх висот показує, де саме розрив найбільший:
+```{r gaps}
+gap <- sapply(hc, function(h) {
+  hh <- rev(h$height)[1:12]
+  round(hh[-length(hh)] / hh[-1], 2)        # h_k / h_{k+1}
+})
+rownames(gap) <- paste0("k=", 2:12)
+knitr::kable(t(gap), caption="Відношення сусідніх висот злиття h(k)/h(k+1); великі значення - кандидати на оптимальне k")
+```
+
+
+### 2. Кофенетичні відстані та кофенетична кореляція
+
+Кофенетична відстань між двома об'єктами - це висота, на якій вони вперше опиняються
+в одному кластері. Кореляція кофенетичних відстаней з вихідними показує, наскільки
+дендрограма відтворює реальні відстані між об'єктами.
+
+```{r cophenetic}
+coph.cor <- matrix(NA, length(ds), length(ms), dimnames=list(ds.ua[ds], ms.ua[ms]))
+for (d in ds) for (m in ms) {
+  coph <- cophenetic(hc[[paste(d, m, sep=".")]])
+  coph.cor[ds.ua[d], ms.ua[m]] <- cor(coph, D[[d]])
+}
+knitr::kable(round(coph.cor, 4), caption="Кофенетична кореляція")
+
+best <- which(coph.cor == max(coph.cor), arr.ind=TRUE)
+best.d <- ds[best[1, "row"]]
+best.m <- ms[best[1, "col"]]
+cat("Найкраща дендрограма:", ds.ua[best.d], "відстань,", ms.ua[best.m],
+    "; кофенетична кореляція =", round(max(coph.cor), 4), "\n")
+```
+
+
+Діаграма розсіювання вихідних і кофенетичних відстаней для найкращої дендрограми
+(для читабельності показано випадкову підмножину пар):
+
+```{r coph-scatter}
+hc.best <- hc[[paste(best.d, best.m, sep=".")]]
+coph.best <- cophenetic(hc.best)
+set.seed(1)
+idx <- sample(length(coph.best), 5000)
+plot(as.vector(D[[best.d]])[idx], as.vector(coph.best)[idx], pch=19, cex=0.3,
+     col=rgb(0, 0, 0, 0.3),
+     xlab="вихідна відстань", ylab="кофенетична відстань",
+     main=paste0("Кофенетична кореляція: ", ds.ua[best.d], ", ", ms.ua[best.m]))
+abline(0, 1, col="red", lty=2)
+```
+
+
+### 3. Детальний розгляд найкращої дендрограми
+
+За висотами злиття (п. 1.1) обираємо рівень обрізання. Беремо висоту між k-ю та (k+1)-ю
+найбільшими висотами, щоб обрізання дало рівно `k.cut` кластерів.
+
+```{r cutlevel}
+k.cut <- 8                                   # кількість кластерів за дендрограмами
+
+hh <- rev(hc.best$height)
+h.cut <- mean(c(hh[k.cut - 1], hh[k.cut]))   # рівень між (k-1)-м і k-м злиттям
+cat("Рівень обрізання h =", round(h.cut, 3),
+    "дає", length(unique(cutree(hc.best, h=h.cut))), "кластерів\n")
+```
+
+
+Дендрограма з позначеним рівнем обрізання:
+
+```{r dendro-best, fig.width=9, fig.height=5}
+hcd <- as.dendrogram(hc.best)
+plot(hcd, leaflab="none",
+     main=paste0("Дендрограма: ", ds.ua[best.d], " відстань, ", ms.ua[best.m]))
+abline(h=h.cut, col="red", lty=2)
+```
+
+#### 3.1 Верхня та нижні частини дендрограми
+
+Структура даних усередині кластерів на спільному рисунку не видна через великий обсяг
+вибірки. Розділимо дендрограму на верхню частину і `r k.cut` нижніх, що відповідають
+виділеним кластерам (функції пакета `dendextend`).
+
+```{r upper}
+cut.res <- cut(hcd, h=h.cut)
+hup <- cut.res$upper
+labels(hup) <- letters[1:k.cut]
+plot(hup, main=paste0("Верхня частина дендрограми (обрізання на h = ", round(h.cut, 2), ")"))
+```
+
+
+```{r lower, fig.width=10, fig.height=6}
+par(mfrow=c(2, 4), mar=c(1, 4, 3, 1))
+for (i in 1:k.cut) {
+  low <- cut.res$lower[[i]]
+  plot(low, leaflab="none", main=letters[i])
+}
+par(mfrow=c(1, 1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+
+### 4. Обрізання дендрограм і порівняння з Завданням 1
+
+Отримуємо розбиття функцією `cutree()`. Згідно з висотами злиття розглядаємо два рівні:
+грубий (k = 3) і дрібний (k = 8, розбиття із Завдання 1).
+
+```{r cutree}
+# короткі позначення: відстань / метод зв'язку
+sh.d <- c(euclidean="євкл.", manhattan="манх.", maximum="макс.")
+sh.m <- c(single="один.", complete="повн.", average="серед.")
+
+cl.hc <- list()
+info <- NULL
+for (d in ds) for (m in ms) for (k in c(3, 8)) {
+  nm <- paste0(sh.d[d], "/", sh.m[m], "/k=", k)
+  cl.hc[[nm]] <- cutree(hc[[paste(d, m, sep=".")]], k=k)
+  info <- rbind(info, data.frame(Відстань=ds.ua[d], Метод=ms.ua[m], k=k))
+}
+
+cmp <- data.frame(
+  info,
+  Розміри  = sapply(cl.hc, function(x) paste(table(x), collapse=", ")),
+  Ренда    = round(sapply(cl.hc, function(x) rand.index(x, cl.km)), 4),
+  Випр.Ренда = round(sapply(cl.hc, function(x) adjustedRandIndex(x, cl.km)), 4),
+  Силует   = round(sapply(cl.hc, function(x) mean(silhouette(x, D$euclidean)[, 3])), 3),
+  row.names = NULL)
+knitr::kable(cmp, caption="Порівняння ієрархічних розбиттів з розбиттям k-середніх (k = 8) із Завдання 1")
+```
+
+Таблиці спряженості для найкращої дендрограми:
+
+```{r tables}
+cat("k = 8:\n")
+table(Ієрархічне=cutree(hc.best, 8), `k-середні`=cl.km)
+
+cat("\nk = 3 (грубий рівень):\n")
+table(Ієрархічне=cutree(hc.best, 3), `k-середні`=cl.km)
+```
+
+Порівняння ієрархічних розбиттів між собою (чи залежить результат від методу та відстані):
+
+```{r cross}
+cl8 <- cl.hc[grep("k=8$", names(cl.hc))]
+names(cl8) <- sub("/k=8", "", names(cl8))
+AR8 <- outer(names(cl8), names(cl8),
+             Vectorize(function(a, b) adjustedRandIndex(cl8[[a]], cl8[[b]])))
+dimnames(AR8) <- list(names(cl8), names(cl8))
+knitr::kable(round(AR8, 3), caption="Виправлений індекс Ренда між ієрархічними розбиттями при k = 8")
+```
+
+### 5. Відображення розбиття
+
+Матрична діаграма розсіювання для розбиття, отриманого обрізанням найкращої дендрограми:
+
+```{r pairs}
+cl.cut <- cutree(hc.best, k.cut)
+pairs(samp, cex=0.4, pch=19, col=pal[cl.cut],
+      main=paste0("Ієрархічна кластеризація (", ds.ua[best.d], ", ",
+                  ms.ua[best.m], "), k=", k.cut))
+```
+
+Для порівняння - те саме розбиття у просторі перших двох головних компонент
+(як у Завданні 2):
+
+```{r pca}
+pc <- princomp(samp)
+plot(pc$scores[, 1:2], col=pal[cl.cut], cex=1, type="n",
+     xlab="Comp.1", ylab="Comp.2",
+     main="Ієрархічне розбиття у просторі перших двох головних компонент")
+text(pc$scores[, 1:2], labels=letters[cl.cut], col=pal[cl.cut], cex=0.7)
+```
+
+
+```{r final}
+cat("Найкраща дендрограма за кофенетичною кореляцією:",
+    ds.ua[best.d], "відстань,", ms.ua[best.m],
+    "- кореляція", round(max(coph.cor), 4), "\n")
+cat("Діапазон кофенетичних кореляцій:",
+    round(min(coph.cor), 4), "-", round(max(coph.cor), 4), "\n")
+cat("Виправлений індекс Ренда (ієрархічне k=8 проти k-середніх k=8):",
+    round(adjustedRandIndex(cutree(hc.best, 8), cl.km), 4), "\n")
+```
+
+
+
+
+

@@ -1,0 +1,226 @@
+---
+title: "Завдання 2. Методи зниження вимірності"
+author: "студентки 2 курсу магістратури, групи МатШІ, Крічфалуши Дар'ї"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: pdflatex
+  html_document:
+    df_print: paged
+header-includes:
+- \usepackage[T2A]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage[ukrainian]{babel}
+- \usepackage{tempora}
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+- \usepackage{geometry}
+---
+
+# Варіант 4
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,
+                      dev="png", dpi=150,
+                      fig.width=7, fig.height=5, fig.align="center")
+library(cluster)  # silhouette()
+library(fossil)   # rand.index()
+library(mclust)   # adjustedRandIndex()
+```
+
+## Частина 1
+
+На даних з частини 1 Завдання 1 провести зниження вимірності різними методами та відобразити на отриманих рисунках найкраще розбиття, яке було отримане при виконанні завдання 1. 
+
+### Дані та найкраще розбиття із завдання 1
+
+У Завданні 1 було обрано розбиття методом центроїдів **Ллойда на k = 8 кластерів**
+(за мінімальним значенням WSS серед трьох алгоритмів центроїдів). Відтворимо його з тими самими параметрами та `set.seed`.
+
+```{r data}
+samp <- read.table("mult4.txt", header=TRUE)
+dim(samp)
+head(samp, 5)
+```
+
+```{r best}
+k.opt <- 8
+set.seed(12345)
+km.res <- kmeans(samp, centers=k.opt, algorithm="Lloyd", nstart=50)
+
+cl <- km.res$cluster
+table(cl)
+
+cat("WSS =", round(km.res$tot.withinss, 3),
+    "; BSS/WSS =", round(km.res$betweenss / km.res$tot.withinss, 2), "\n")
+
+# Палітра: 8 кластерів (як у Завданні 1)
+pal <- c("black","red","blue","green","magenta","chocolate",
+         "darkblue","darkred","aquamarine","grey")
+```
+
+Вихідна матрична діаграма розсіювання цього розбиття:
+```{r pairs0}
+pairs(samp, cex=0.4, pch=19, col=pal[cl],
+      main=paste0("Матриця розсіювання (метод Ллойда) k=", k.opt))
+```
+
+
+### 1. Головні компоненти
+```{r pca}
+pc <- princomp(samp)
+summary(pc)
+```
+
+Частка поясненої дисперсії по компонентах:
+```{r pcvar}
+ev <- pc$sdev^2
+expl <- data.frame(Comp = paste0("Comp.", seq_along(ev)),
+                   Variance = round(ev, 4),
+                   Proportion = round(ev / sum(ev), 4),
+                   Cumulative = round(cumsum(ev) / sum(ev), 4))
+knitr::kable(expl, caption="Дисперсія головними компонентами")
+screeplot(pc, type="lines", main="Діаграма осипу (scree plot)")
+```
+
+Напрямки головних компонент:
+```{r loadings}
+unclass(loadings(pc))
+```
+
+#### 1.1 Двовимірна діаграма (Comp1 - Comp2)
+Точки позначено літерами номерів кластерів (a, b, c, ...) і розфарбовано відповідно до розбиття.
+```{r pc12}
+plot(pc$scores[, 1:2], col=pal[cl], cex=1, type="n",
+     xlab="Comp.1", ylab="Comp.2",
+     main="Розбиття у просторі перших двох головних компонент")
+text(pc$scores[, 1:2], labels=letters[cl], col=pal[cl], cex=0.7)
+```
+
+#### 1.2 Матриця діаграм для перших трьох компонент
+```{r pc123pairs}
+pairs(pc$scores[, 1:3], cex=0.4, pch=19, col=pal[cl],
+      main="Перші три головні компоненти")
+```
+
+#### 1.3 Тривимірна діаграма (Comp1 - Comp2 - Comp3)
+Інтерактивний рисунок
+```{r pc3d, eval=knitr::is_html_output()}
+options(rgl.useNULL=TRUE)
+library(rgl)
+open3d()
+plot3d(pc$scores[, 1:3], col=pal[cl], size=5,
+       xlab="Comp.1", ylab="Comp.2", zlab="Comp.3")
+rglwidget()
+```
+
+#### 1.4 Оцінка якості проекції
+Щоб кількісно перевірити, наскільки кластери розділяються на проекції, порахуємо середній силует розбиття у просторі перших d головних компонент (d = 2, 3, 5).
+```{r pcsil}
+sil.pc <- sapply(c(2, 3, 5), function(d)
+  mean(silhouette(cl, dist(pc$scores[, 1:d]))[, 3]))
+names(sil.pc) <- paste0("d=", c(2, 3, 5))
+round(sil.pc, 3)
+```
+
+
+### 2. Канонічні напрямки
+Для розбиття будуємо матрицю-індикатор кластерів `C` ($n \times k$, `C[i,j]=1`, якщо i-й об'єкт належить j-му кластеру) та шукаємо канонічні компоненти між змінними та індикаторами кластерів функцією `rcc()` пакета `CCA` (регуляризований канонічний аналіз, параметри регуляризації 0.1).
+
+```{r cca}
+library(CCA)
+k <- length(levels(as.factor(cl)))
+n <- nrow(samp)
+C <- matrix(data=as.numeric(rep(cl, k) == rep(1:k, each=n)), ncol=k, nrow=n)
+
+cc_res <- rcc(samp, C, 0.1, 0.1)
+round(cc_res$cor, 4)
+```
+
+#### 2.1 Перші дві канонічні компоненти
+```{r cc12}
+plot(cc_res$scores$xscores[, 1:2], col=pal[cl], cex=1, type="n",
+     xlab="Канонічна компонента 1", ylab="Канонічна компонента 2",
+     main="Розбиття у просторі перших двох канонічних компонент")
+text(cc_res$scores$xscores[, 1:2], labels=letters[cl], col=pal[cl], cex=0.7)
+```
+
+#### 2.2 Три канонічні компоненти
+```{r cc123pairs}
+pairs(cc_res$scores$xscores[, 1:3], cex=0.4, pch=19, col=pal[cl],
+      main="Перші три канонічні компоненти")
+```
+
+```{r cc3d, eval=knitr::is_html_output()}
+options(rgl.useNULL=TRUE)
+library(rgl)
+open3d()
+plot3d(cc_res$scores$xscores[, 1:3], col=pal[cl], size=5,
+       xlab="CC1", ylab="CC2", zlab="CC3")
+rglwidget()
+```
+
+#### 2.3 Оцінка якості проекції на канонічні компоненти
+```{r ccsil}
+sil.cc <- sapply(c(2, 3), function(d)
+  mean(silhouette(cl, dist(cc_res$scores$xscores[, 1:d]))[, 3]))
+names(sil.cc) <- paste0("d=", c(2, 3))
+round(sil.cc, 3)
+```
+
+
+### 3. Класичне багатовимірне шкалування
+
+Спочатку перетворимо дані в таблицю відмінностей (матрицю відстаней) для трьох варіантів відстані: евклідової, манхеттенської та максимальної; потім застосуємо `cmdscale()` з k = 2.
+
+```{r mds, fig.width=10, fig.height=4.5}
+dists <- c("euclidean", "manhattan", "maximum")
+titles <- c("Евклідова відстань", "Манхеттенська відстань", "Максимальна відстань")
+
+mds.res <- vector("list", 3)
+names(mds.res) <- dists
+sil.mds <- numeric(3)
+gof <- matrix(NA, 3, 2, dimnames=list(dists, c("GOF1", "GOF2")))
+
+par(mfrow=c(1, 3))
+for (i in 1:3) {
+  d <- dist(samp, method=dists[i])
+  fit <- cmdscale(d, eig=TRUE, k=2)
+  mds.res[[i]] <- fit
+  gof[i, ] <- fit$GOF
+  sil.mds[i] <- mean(silhouette(cl, dist(fit$points))[, 3])
+  plot(fit$points[, 1], fit$points[, 2], col=pal[cl], cex=0.8, pch=19,
+       xlab="Координата 1", ylab="Координата 2", main=titles[i])
+}
+par(mfrow=c(1, 1))
+```
+
+Порівняння якості: частка відображеної "дисперсії" (GOF) та середній силует розбиття у двовимірному просторі.
+```{r mdscmp}
+res <- data.frame(Відстань = titles,
+                  GOF = round(gof[, 1], 3),
+                  Силует_2D = round(sil.mds, 3))
+knitr::kable(res, caption="Якість двовимірних зображень")
+```
+
+Евклідове шкалування збігається з проекцією на головні компоненти (з точністю до знаку осей). Перевіримо:
+```{r mds-vs-pca}
+all.equal(abs(unname(mds.res$euclidean$points[, 1])),
+          abs(unname(pc$scores[, 1])), check.attributes=FALSE)
+```
+
+
+### 4. Порівняння з результатами Завдання 1 та висновки
+
+Зведена таблиця: середній силует найкращого розбиття (k = 8) у вихідному 5-вимірному просторі та на двовимірних зображеннях різних методів.
+```{r summary}
+sil.full <- mean(silhouette(cl, dist(samp))[, 3])
+summ <- data.frame(
+  Простір = c("Вихідний (5 змінних)", "PCA, 2 компоненти", "PCA, 3 компоненти",
+              "Канонічні, 2 компоненти", "Канонічні, 3 компоненти",
+              "БШ, евклідова (2D)", "БШ, манхеттенська (2D)", "БШ, максимальна (2D)"),
+  Середній_силует = round(c(sil.full, sil.pc["d=2"], sil.pc["d=3"],
+                            sil.cc["d=2"], sil.cc["d=3"], sil.mds), 3))
+knitr::kable(summ, caption="Середній силует розбиття k = 8 у різних просторах")
+```
+
